@@ -111,9 +111,15 @@ def write_stack(stream, indent_depth):
 def latex(indent_depth=4, stream=None):
     helper = _Latex()
     yield helper
+
+    should_print_output = stream is None
     if stream is None:
         stream = StringIO()
+
     write_stack(stream, indent_depth)
+
+    if should_print_output:
+        print(stream.getvalue())
 
 
 if __name__ == '__main__':
