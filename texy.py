@@ -49,7 +49,6 @@ class Operable:
 
     def __exit__(self, type, value, traceback):
         push_token(('leave_env',))
-        return self
 
 
 class _Latex:
