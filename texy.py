@@ -108,6 +108,7 @@ def write_stack(stream, indent_depth):
             stream.write(f'{{{format_params(args, kwargs)}}}')
             
         elif token_type == 'expr':
+            expr, = params
             stream.write(f"{expr}\n")
             
         else:
