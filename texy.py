@@ -60,6 +60,10 @@ class _Latex:
     def __getattr__(self, name):
         push_token(('name', name))
         return self._operable
+    
+    def __call__(self, expr):
+        push_token(('expr', expr))
+        return self
 
 
 def format_params(args, kwargs):
@@ -102,7 +106,10 @@ def write_stack(stream, indent_depth):
         elif token_type == 'required':
             args, kwargs = params
             stream.write(f'{{{format_params(args, kwargs)}}}')
-
+            
+        elif token_type == 'expr':
+            stream.write(f"{expr}\n")
+            
         else:
             raise ValueError(token_type)
 
