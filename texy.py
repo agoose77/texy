@@ -109,7 +109,7 @@ def write_stack(stream, indent_depth):
             
         elif token_type == 'expr':
             expr, = params
-            stream.write(f"{expr}\n")
+            stream.write(f"\n{indent()}{expr}")
             
         else:
             raise ValueError(token_type)
