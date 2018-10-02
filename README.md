@@ -1,5 +1,5 @@
-# texy
-Simple python Latex generator
+# TeXy
+Simple python LaTeX generator
 
 ```python
 from texy import latex
