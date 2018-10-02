@@ -1,0 +1,5 @@
+README.md
+example_pkg.egg-info/PKG-INFO
+example_pkg.egg-info/SOURCES.txt
+example_pkg.egg-info/dependency_links.txt
+example_pkg.egg-info/top_level.txt

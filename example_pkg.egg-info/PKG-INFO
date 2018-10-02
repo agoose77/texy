@@ -1,0 +1,30 @@
+Metadata-Version: 2.1
+Name: example-pkg
+Version: 0.0.1
+Summary: A simple python Latex generator.
+Home-page: https://github.com/agoose77/texy
+Author: Angus Hollands
+Author-email: goosey15@gmail.com
+License: UNKNOWN
+Description: # texy
+        Simple python Latex generator
+        
+        ```python
+        with latex() as t:
+            with t.figure._('h!'):
+                t.includegraphics._(width=r'\textwidth')('some_fig.png')
+                t.caption('Some Caption')
+        ```
+        
+        Outputs
+        ```
+        \begin{figure}[h!]
+            \includegraphics[ss, width=\textwidth]{some_fig.png}
+            \caption{Some Caption}
+        \end{figure}
+        ```
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Description-Content-Type: text/markdown
