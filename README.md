@@ -2,6 +2,7 @@
 Simple python Latex generator
 
 ```python
+from texy import latex
 with latex() as t:
     with t.figure._('h!'):
         t.includegraphics._(width=r'\textwidth')('some_fig.png')
