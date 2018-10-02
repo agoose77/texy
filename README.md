@@ -1,6 +1,8 @@
 # TeXy
 Simple python LaTeX generator
 
+`pip install git+https://github.com/agoose77/texy.git#egg=texy`
+
 ```python
 from texy import latex
 with latex() as t:
