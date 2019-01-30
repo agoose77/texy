@@ -4,17 +4,17 @@ Simple python LaTeX generator
 `pip install git+https://github.com/agoose77/texy.git#egg=texy`
 
 ```python
-from texy import latex
+from texy import latex, _
 with latex() as t:
-    with t.figure._('h!'):
-        t.includegraphics._(width=r'\textwidth')('some_fig.png')
+    with t.figure['h!']:
+        t.includegraphics[_(width=r'\textwidth')]('some_fig.png')
         t.caption('Some Caption')
 ```
 
 Outputs
 ```
 \begin{figure}[h!]
-    \includegraphics[ss, width=\textwidth]{some_fig.png}
+    \includegraphics[width=\textwidth]{some_fig.png}
     \caption{Some Caption}
 \end{figure}
 ```

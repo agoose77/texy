@@ -1,138 +1,156 @@
-from io import StringIO
+import typing
 from collections import deque
 from contextlib import contextmanager
+from enum import Enum, auto
+from io import StringIO, TextIOBase
+import textwrap
 
 
-_stack = deque()
+class Operations(Enum):
+    REQUIRED = auto()
+    OPTIONAL = auto()
+    LEAVE_ENV = auto()
+    ENTER_ENV = auto()
+    NAME = auto()
+    TEXT = auto()
 
 
-def push_token(token):
-    _stack.append(token)
+class ArgumentBundle(typing.NamedTuple):
+    args: typing.List[str]
+    kwargs: typing.Dict[str, str]
 
 
-def pop_token():
-    return _stack.pop()
+def _(*args, **kwargs):
+    return ArgumentBundle(args, kwargs)
 
 
-def popleft_token():
-    return _stack.popleft()
+class _LaTeXMacroProxy:
 
+    def __init__(self, stack: typing.Deque[tuple]):
+        self._stack = stack
 
-class Operable:
-
-    def __init__(self):
-        pass
-
-    def __call__(self, *args, **kwargs):
-        push_token(('required', args, kwargs))
+    def __call__(self, *args, **kwargs) -> '_LaTeXMacroProxy':
+        """Implement the """
+        self._stack.append((Operations.REQUIRED, args, kwargs))
         return self
 
-    def _(self, *args, **kwargs):
-        push_token(('optional', args, kwargs))
+    def __getitem__(self, args) -> '_LaTeXMacroProxy':
+        kwargs = {}
+        if isinstance(args, str):
+            args = (args,)
+
+        elif isinstance(args, ArgumentBundle):
+            args, kwargs = args
+
+        self._stack.append((Operations.OPTIONAL, args, kwargs))
         return self
 
-    def __enter__(self):
+    def __enter__(self) -> '_LaTeXMacroProxy':
         temp_stack = []
 
         while True:
-            token = pop_token()
+            token = self._stack.pop()
             temp_stack.append(token)
-            if token[0] == 'name':
+            if token[0] == Operations.NAME:
                 break
 
-        push_token(('enter_env',))
+        self._stack.append((Operations.ENTER_ENV,))
 
         while temp_stack:
-            push_token(temp_stack.pop())
+            self._stack.append(temp_stack.pop())
 
         return self
 
     def __exit__(self, type, value, traceback):
-        push_token(('leave_env',))
+        self._stack.append((Operations.LEAVE_ENV,))
+        return
 
 
-class _Latex:
+class _LaTeXProxy:
 
-    def __init__(self,):
-        self._operable = Operable()
+    def __init__(self, stack: typing.Deque[tuple]):
+        self._stack = stack
+        self._proxy = _LaTeXMacroProxy(self._stack)
 
-    def __getattr__(self, name):
-        push_token(('name', name))
-        return self._operable
-    
-    def __call__(self, expr):
-        push_token(('expr', expr))
-        return self
+    def __getattr__(self, name: str) -> _LaTeXMacroProxy:
+        self._stack.append((Operations.NAME, name))
+        return self._proxy
+
+    def __call__(self, text) -> '_LaTeXProxy':
+        """Implement the """
+        self._stack.append((Operations.TEXT, text))
 
 
-def format_params(args, kwargs):
+def format_params(args: typing.Sequence[str], kwargs: typing.Mapping[str, str]) -> str:
     arg_strings = [str(a) for a in args]
     kwarg_strings = [f"{k}={v}" for k, v in kwargs.items()]
     all_args = [*arg_strings, *kwarg_strings]
     if not all_args:
-        return ''
+        return ""
 
-    return ', '.join(all_args)
+    return ", ".join(all_args)
 
-def write_stack(stream, indent_depth):
-    env_stack = []
+
+def write_operation_stack(stack: typing.Deque[tuple], stream: TextIOBase, indent_depth: int):
+    environment_stack = []
 
     def indent():
-        return len(env_stack) * indent_depth * ' '
+        return len(environment_stack) * indent_depth * " "
 
-    while _stack:
-        token = (token_type, *params) = popleft_token()
+    while stack:
+        token_type, *params = stack.popleft()
 
-        if token_type == 'enter_env':
-            name_token_type, name = popleft_token()
-            assert name_token_type == 'name'
+        if token_type == Operations.ENTER_ENV:
+            name_token_type, name = stack.popleft()
+            assert name_token_type == Operations.NAME
 
-            stream.write(f'\n{indent()}\\begin{{{name}}}')
-            env_stack.append(name)
+            stream.write(f"\n{indent()}\\begin{{{name}}}")
+            environment_stack.append(name)
 
-        elif token_type == 'leave_env':
-            name = env_stack.pop()
-            stream.write(f'\n{indent()}\\end{{{name}}}')
+        elif token_type == Operations.LEAVE_ENV:
+            name = environment_stack.pop()
+            stream.write(f"\n{indent()}\\end{{{name}}}")
 
-        elif token_type == 'name':
+        elif token_type == Operations.NAME:
             name, = params
-            stream.write(f'\n{indent()}\\{name}')
+            stream.write(f"\n{indent()}\\{name}")
 
-        elif token_type == 'optional':
+        elif token_type == Operations.OPTIONAL:
             args, kwargs = params
-            stream.write(f'[{format_params(args, kwargs)}]')
+            stream.write(f"[{format_params(args, kwargs)}]")
 
-        elif token_type == 'required':
+        elif token_type == Operations.REQUIRED:
             args, kwargs = params
-            stream.write(f'{{{format_params(args, kwargs)}}}')
-            
-        elif token_type == 'expr':
-            expr, = params
-            stream.write(f"\n{indent()}{expr}")
-            
+            stream.write(f"{{{format_params(args, kwargs)}}}")
+
+        elif token_type == Operations.TEXT:
+            text, = params
+
+            stream.write("\n")
+            stream.write(textwrap.indent(text, indent()))
+
         else:
             raise ValueError(token_type)
 
 
 @contextmanager
-def latex(indent_depth=4, stream=None):
-    helper = _Latex()
-    yield helper
+def latex(indent_depth: int = 4, stream: TextIOBase = None):
+    stack = deque()
+    yield _LaTeXProxy(stack)
 
     should_print_output = stream is None
     if stream is None:
         stream = StringIO()
 
-    write_stack(stream, indent_depth)
+    write_operation_stack(stack, stream, indent_depth)
 
     if should_print_output:
         print(stream.getvalue())
 
 
-if __name__ == '__main__':
-    from pprint import pprint
-
+if __name__ == "__main__":
     with latex() as t:
-        with t.figure._('h!'):
-            t.includegraphics._(width=r'\textwidth')('some_fig.png')
+        t("HI")
+        with t.figure['h!']:
+            t.includegraphics[_(width=r'\textwidth')]('some_fig.png')
             t.caption('Some Caption')
