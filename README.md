@@ -21,5 +21,4 @@ Some text
     \includegraphics[width=\textwidth]{some_fig.png}
     \caption{Some Caption}
 \end{figure}
-
 ```
